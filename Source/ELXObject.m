@@ -186,6 +186,10 @@ static NSUInteger _mdatabaseNextID;
     objc_property_t *properties = class_copyPropertyList([self class], &pcount);
     unsigned int rcount;
     objc_property_t *rproperties = class_copyPropertyList([ELXObject class], &rcount);
+    // special case: directly using ELXObject itself
+    if ([self isMemberOfClass:[ELXObject class]]) {
+        rcount = 0;
+    }
     unsigned int tcount = rcount + pcount;
     for (unsigned int i = 0; i < tcount; i++) {
         objc_property_t property = (i < pcount) ? properties[i] : rproperties[i - pcount];
@@ -680,7 +684,7 @@ static NSUInteger _mdatabaseNextID;
     
     // retrieve elxid
     if (!updateOnly)
-        self.elxuid = sqlite3_last_insert_rowid(_database);
+        self.elxuid = (NSUInteger)sqlite3_last_insert_rowid(_database);
     
     sqlite3_finalize(stmt);
     [self.class closeDatabase];
@@ -845,6 +849,10 @@ static NSUInteger _mdatabaseNextID;
     objc_property_t *properties = class_copyPropertyList([self class], &pcount);
     unsigned int rcount;
     objc_property_t *rproperties = class_copyPropertyList([ELXObject class], &rcount);
+    // special case: directly using ELXObject itself
+    if ([NSStringFromClass(self) isEqualToString:NSStringFromClass([ELXObject class])]) {
+        rcount = 0;
+    }
     unsigned int tcount = rcount + pcount;
     for (unsigned int i = 0; i < tcount; i++) {
         objc_property_t property = (i < pcount) ? properties[i] : rproperties[i - pcount];
@@ -867,8 +875,7 @@ static NSUInteger _mdatabaseNextID;
     NSAssert([self openDatabase], ERR_FAILED_OPEN_DB);
     
     sqlite3_stmt *stmt = nil;
-    BOOL success = (sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL) == SQLITE_OK);
-    NSAssert(success, ERR_FAILED_PREP_STMT);
+    NSAssert((sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL) == SQLITE_OK), ERR_FAILED_PREP_STMT);
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         id obj = [self new];
         // get number of columns and loop through
@@ -1273,6 +1280,10 @@ static NSUInteger _mdatabaseNextID;
     // we also need the root properties from ELXObject
     unsigned int rcount;
     objc_property_t *rproperties = class_copyPropertyList([ELXObject class], &rcount);
+    // special case: directly using ELXObject itself
+    if ([NSStringFromClass(self) isEqualToString:NSStringFromClass([ELXObject class])]) {
+        rcount = 0;
+    }
     unsigned int tcount = pcount + rcount;
     for (unsigned int i = 0; i < tcount; i++) {
         objc_property_t property = (i < pcount) ? properties[i] : rproperties[i - pcount];
@@ -1339,6 +1350,10 @@ static NSUInteger _mdatabaseNextID;
     objc_property_t *properties = class_copyPropertyList([self class], &pcount);
     unsigned int rcount;
     objc_property_t *rproperties = class_copyPropertyList([ELXObject class], &rcount);
+    // special case: directly using ELXObject itself
+    if ([NSStringFromClass(self) isEqualToString:NSStringFromClass([ELXObject class])]) {
+        rcount = 0;
+    }
     unsigned int tcount = rcount + pcount;
     for (unsigned int i = 0; i < tcount; i++) {
         objc_property_t property = (i < pcount) ? properties[i] : rproperties[i - pcount];
@@ -1676,6 +1691,10 @@ static NSUInteger _mdatabaseNextID;
         objc_property_t *properties = class_copyPropertyList([self class], &pcount);
         unsigned int rcount;
         objc_property_t *rproperties = class_copyPropertyList([ELXObject class], &rcount);
+        // special case: directly using ELXObject itself
+        if ([self isMemberOfClass:[ELXObject class]]) {
+            rcount = 0;
+        }
         unsigned int tcount = pcount + rcount;
         for (unsigned int i = 0; i < tcount; i++) {
             objc_property_t property = (i < pcount) ? properties[i] : rproperties[i - pcount];
@@ -1881,6 +1900,10 @@ static NSUInteger _mdatabaseNextID;
     objc_property_t *properties = class_copyPropertyList([self class], &pcount);
     unsigned int rcount;
     objc_property_t *rproperties = class_copyPropertyList([ELXObject class], &rcount);
+    // special case: directly using ELXObject itself
+    if ([self isMemberOfClass:[ELXObject class]]) {
+        rcount = 0;
+    }
     unsigned int tcount = pcount + rcount;
     for (unsigned int i = 0; i < tcount; i++) {
         objc_property_t property = (i < pcount) ? properties[i] : rproperties[i - pcount];

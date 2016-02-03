@@ -1,4 +1,5 @@
 # Elixir
+[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 
 **TL;DR:** Elixir is a simple and lightweight library that lets you easily persist your objects (i.e. make them live forever*) and query objects.
 
@@ -8,10 +9,18 @@
 Let's face it: most of times, we need some of our objects to live just longer than the running application itself. Backend by SQLite, Elixir is a simple (only 4 core APIs) and lightweight (only 2 files, around 2000 lines of code) persistent solution. It fully utilizes Objective-C's runtime environment to automatically save and load object properties to and from a sqlite database with minimum user interaction; it provides object query support with the NSPredicate interface, and most importantly, with simplicity as the main design objective, Elixir is very easy to use. Elixir is perfect for the projects that are too complex to use NSUserDefault, but not complicated enough to require the convolution of CoreData or raw SQL.
 
 ## Installation
-#### CocoaPods
-(coming later)
-
 #### Carthage
+Elixir is [Carthage](https://github.com/Carthage/Carthage) compatible. To include it add the following line to your `Cartfile`
+```bash
+github "iCharlesHu/Elixir" >= 0.1.0
+```
+Then, simply run `carthage update` under the same working directory. The resultant frameworks will be stored in:
+- `./Carthage/Build/Mac/Elixir.framework`
+- `./Carthage/Build/iOS/Elixir.framework`
+
+You can simple drag the framework(s) into your project.
+
+#### CocoaPods
 (coming later)
 
 #### Manual
