@@ -15,5 +15,3 @@ FOUNDATION_EXPORT double ElixirVersionNumber;
 FOUNDATION_EXPORT const unsigned char ElixirVersionString[];
 
 #import <Elixir/ELXObject.h>
-
-

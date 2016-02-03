@@ -53,11 +53,7 @@
 		477D5BE51C6069D80065D4A6 = {
 			isa = PBXGroup;
 			children = (
-				477D5C091C606B0D0065D4A6 /* libsqlite3.tbd */,
-				477D5C071C606B050065D4A6 /* libsqlite3.tbd */,
-				477D5C171C606CB70065D4A6 /* Source */,
-				477D5BF11C6069D80065D4A6 /* Elixir */,
-				477D5C001C606AB30065D4A6 /* Elixir-iOS */,
+				47D41D131C60F36600B4F5C0 /* Elixir */,
 				477D5BF01C6069D80065D4A6 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -77,7 +73,7 @@
 				477D5BF21C6069D80065D4A6 /* Elixir.h */,
 				477D5BF41C6069D80065D4A6 /* Info.plist */,
 			);
-			path = Elixir;
+			name = Elixir;
 			sourceTree = "<group>";
 		};
 		477D5C001C606AB30065D4A6 /* Elixir-iOS */ = {
@@ -87,7 +83,7 @@
 				477D5C031C606AB30065D4A6 /* Info.plist */,
 			);
 			path = "Elixir-iOS";
-			sourceTree = "<group>";
+			sourceTree = SOURCE_ROOT;
 		};
 		477D5C171C606CB70065D4A6 /* Source */ = {
 			isa = PBXGroup;
@@ -96,6 +92,19 @@
 				477D5C121C606CA90065D4A6 /* ELXObject.m */,
 			);
 			name = Source;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		47D41D131C60F36600B4F5C0 /* Elixir */ = {
+			isa = PBXGroup;
+			children = (
+				477D5C091C606B0D0065D4A6 /* libsqlite3.tbd */,
+				477D5C071C606B050065D4A6 /* libsqlite3.tbd */,
+				477D5C171C606CB70065D4A6 /* Source */,
+				477D5BF11C6069D80065D4A6 /* Elixir */,
+				477D5C001C606AB30065D4A6 /* Elixir-iOS */,
+			);
+			path = Elixir;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -411,6 +420,7 @@
 				477D5BF91C6069D80065D4A6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		477D5C041C606AB30065D4A6 /* Build configuration list for PBXNativeTarget "Elixir-iOS" */ = {
 			isa = XCConfigurationList;
@@ -419,6 +429,7 @@
 				477D5C061C606AB30065D4A6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

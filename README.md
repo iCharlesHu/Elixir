@@ -1,6 +1,11 @@
 # Elixir
 
-TL;DR: Elixir is a simple and lightweight library that lets you easily persist your objects (i.e. make them live forever*) and query objects.
+**TL;DR:** Elixir is a simple and lightweight library that lets you easily persist your objects (i.e. make them live forever*) and query objects.
+
+(*: sometimes when grownups say forever, they mean a very long time.)
+
+## Overview
+Let's face it: most of times, we need some of our objects to live just longer than the running application itself. Backend by SQLite, Elixir is a simple (only 4 core APIs) and lightweight (only 2 files, around 2000 lines of code) persistent solution. It fully utilizes Objective-C's runtime environment to automatically save and load object properties to and from a sqlite database with minimum user interaction; it provides object query support with the NSPredicate interface, and most importantly, with simplicity as the main design objective, Elixir is very easy to use. Elixir is perfect for the projects that are too complex to use NSUserDefault, but not complicated enough to require the convolution of CoreData or raw SQL.
 
 ## Installation
 #### CocoaPods
@@ -46,7 +51,7 @@ You can use NSPredicate to query your objects (see Apple's [documentation](https
 
 These methods will return an empty `NSArray` if no objects found.
 
-Note that although SQL does not enforce column name (property name) to be the left-hand-side of the comparison, some predicates (for example, between and in) do emphasis this order. Therefore, it's always a good practice to put property name as the left-hand-side and the value you are comparing to as the right hand side when defining a predicate.
+Note that although SQL does not enforce column name (property name) to be the left-hand-side of the comparison, some predicates (for example, `BETWEEN` and `IN`) do emphasis this order. Therefore, it's always a good practice to put property name as the left-hand-side and the value you are comparing to as the right hand side when defining a predicate.
 
 ## In-Memory-Only Mode
 You can set a object to be saved in memory only by invoking
@@ -83,12 +88,12 @@ By design, Elixir will only store object properties, NOT Ivars. Therefore, you c
 Elixir will automatically check the current list of properties against saved table schema, and add/delete columns when needed. However, since deleting a column is very costly and it might introduce data lose, please try to **avoid** deleting columns.
 
 
-NOTE: do *NOT* **rename** object properties. Elixir will treat it as a new property and delete the old column, which will cause loss of data.
+**NOTE:** do *NOT* **rename** object properties. Elixir will treat it as a new property and delete the old column, which will cause the loss of data.
 
 ### Limitations
 The primary design goal Elixir is to be *lightweight* and *simple to use*. Therefore, some functionalities are sacrificed for the simplicity. Specifically:
 - `struct`, `union`, `array`, and `pointer` types are *NOT* supported. You can still use them as properties, but they will not be saved to database. The reason behind this decision is that Objective-C forbits the creation of an unknown struct (or union) at runtime. However, you can pack your structs to `NSData` or `NSValue` and save them instead.
-- At this stage, all the `NSCoding` conforming objects (except `NSDate` and `NSString`, but including *all* the collection types) are serialized and stored as `blob` in the SQL table. This means predicate comparison on object properties will `NOT` work. Predicate comparisons mostly work on strings and numeric properties.
+- At this stage, all the `NSCoding` conforming objects (except `NSDate` and `NSString`, but including *all* the collection types) are serialized and stored as `blob` in the SQL table. This means predicate comparison on object properties will *NOT* work. Predicate comparisons mostly work on strings and numeric properties.
 
 ## License
 This code is distributed under the terms and conditions of the MIT license.
