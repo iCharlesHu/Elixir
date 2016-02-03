@@ -12,13 +12,14 @@ Let's face it: most of times, we need some of our objects to live just longer th
 #### Carthage
 Elixir is [Carthage](https://github.com/Carthage/Carthage) compatible. To include it add the following line to your `Cartfile`
 ```bash
-github "iCharlesHu/Elixir" >= 0.1.0
+github "iCharlesHu/Elixir" "master"
 ```
 Then, simply run `carthage update` under the same working directory. The resultant frameworks will be stored in:
 - `./Carthage/Build/Mac/Elixir.framework`
 - `./Carthage/Build/iOS/Elixir.framework`
 
 You can simple drag the framework(s) into your project.
+**NOTE:** In your Target > General tab, make sure you have Elixir.framework listed under Embedded Binaries *and* Linked Frameworks and Libraries.
 
 #### CocoaPods
 (coming later)
@@ -33,6 +34,11 @@ Before using Elixir, make sure you include the `ELXObject` header file:
 ```obj-c
 #import "ELXObject.h"
 ```
+Or, if you are targeting iOS 8+ using the dynamic framework, especially with Carthage, you can simply include the module:
+```obj-c
+@import Elixir;
+```
+
 To use Elixir, **subclass** any object that you wish to persistent on disk from `ELXObject`.
 
 ### Archiving Object
