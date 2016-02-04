@@ -59,23 +59,30 @@ static NSString * const __nonnull kELXObjectSerializationKey = @"ELXObjectSerial
 static NSString * const __nonnull kELXObjectUnsupportedKey = @"ELXObjectUnsupportedKey";
 
 /**
- * Error messages - Database related
+ * Error messages - Property related
  */
+static NSString * const __nonnull ELXInvalidPropertyException = @"ELXInvalidPropertyException";
 static NSString * const __nonnull ERR_INVALID_GETTER = @"Elixir[ERROR]: object must respond to custome property getter";
 static NSString * const __nonnull ERR_INVALID_SETTER = @"Elixir[ERROR]: object must respond to custome property setter";
+/**
+ * Error messages - Database related
+ */
+static NSString * const __nonnull ELXFailedSQLiteOperationException = @"ELXFailedSQLiteOperationException";
 static NSString * const __nonnull ERR_FAILED_OPEN_DB = @"Elixir[ERROR]: failed to open database file";
-static NSString * const __nonnull ERR_FAILED_CREATE_DB = @"Elixir[ERROR]: failed to create database file";
-static NSString * const __nonnull ERR_FAILED_PREP_STMT = @"Elixir[ERROR]: failed to prepare SQL statement";
+static NSString * const __nonnull ERR_FAILED_CREATE_DB = @"Elixir[ERROR]: failed to create database file with error code: %d";
+static NSString * const __nonnull ERR_FAILED_PREP_STMT = @"Elixir[ERROR]: failed to prepare SQL statement with error code: %d";
 static NSString * const __nonnull ERR_FAILED_INIT_TABLE = @"Elixir[ERROR]: failed to initialize table for class %@";
 static NSString * const __nonnull ERR_FAILED_UPDATE_SCHEMA = @"Elixir[ERROR]: failed to update class schema with error %s";
 /**
  * Error messages - Insert/Delete
  */
+static NSString * const __nonnull ELXFailedOperationException = @"ELXFailedOperationException";
 static NSString * const __nonnull ERR_FAILED_INSERT_OBJ = @"Elixir[ERROR]: failed to insert object %@";
 static NSString * const __nonnull ERR_FAILED_DELETE_OBJ = @"Elixir[ERROR]: failed to delete object %@";
 /**
  * Error messages - Predicate related
  */
+static NSString * const __nonnull ELXIllegalPredicateException = @"ELXIllegalPredicateException";
 static NSString * const __nonnull ERR_ILL_PREDICATE_TYPE = @"Elixir[ERROR]: illegal predicate type";
 static NSString * const __nonnull ERR_UNSUPPORTED_PREDICATE_OPERATOR = @"Elixir[ERROR]: unsupported predicate operator type";
 static NSString * const __nonnull ERR_UNSUPPORTED_PREDICATE_MODIFIER = @"Elixir[ERROR]: comparison predicate modifier (ANY, ALL) is not currently supported.";
@@ -211,7 +218,9 @@ static NSUInteger _mdatabaseNextID;
             // unsigned char is stored as c string
             unsigned char val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 unsigned char (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -236,7 +245,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeShort || type == ELXObjectTypeInt) {
             int val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 int (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -261,7 +272,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeLong || type == ELXObjectTypeLongLong) {
             long long val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 long long (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -286,7 +299,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeChar) {
             char val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 char (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -313,7 +328,9 @@ static NSUInteger _mdatabaseNextID;
             // in this case, use interger 1 and 0 as table value
             BOOL val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 BOOL (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -338,7 +355,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeUnsignedShort || type == ELXObjectTypeUnsignedInt) {
             unsigned int val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 unsigned int (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -363,7 +382,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeUnsignedLong || type == ELXObjectTypeUnsignedLongLong) {
             unsigned long long val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 unsigned long long (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -388,7 +409,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeFloat || type == ELXObjectTypeDouble) {
             double val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 double (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -416,7 +439,9 @@ static NSUInteger _mdatabaseNextID;
             const char *val = NULL;
             NSString *value = nil;
             
-            NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+            if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
             IMP imp = [self methodForSelector:getter];
             const char *(*func)(id, SEL) = (void *)imp;
             val = func(self, getter);
@@ -447,7 +472,9 @@ static NSUInteger _mdatabaseNextID;
             // objects are seralized to blob
             id val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 id (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -497,7 +524,9 @@ static NSUInteger _mdatabaseNextID;
             Class val = NULL;
             NSValue *value;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 Class (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -531,7 +560,9 @@ static NSUInteger _mdatabaseNextID;
             SEL val = NULL;
             NSValue *value;
             
-            NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+            if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
             IMP imp = [self methodForSelector:getter];
             SEL (*func)(id, SEL) = (void *)imp;
             val = func(self, getter);
@@ -568,7 +599,9 @@ static NSUInteger _mdatabaseNextID;
             void *val = NULL;
             NSValue *value;
             
-            NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+            if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
             IMP imp = [self methodForSelector:getter];
             void *(*func)(id, SEL) = (void *)imp;
             val = func(self, getter);
@@ -596,7 +629,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeString) {
             NSString *value = nil;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 NSString *(*func)(id, SEL) = (void *)imp;
                 value = func(self, getter);
@@ -626,7 +661,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeDateTime) {
             NSDate *val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 NSDate *(*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -669,18 +706,23 @@ static NSUInteger _mdatabaseNextID;
         query = [NSString stringWithFormat:@"%@%@", query1, query2];
     }
     
-    NSAssert([self.class openDatabase], ERR_FAILED_OPEN_DB);
+    if (![self.class openDatabase]) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_OPEN_DB];
+    }
     
     sqlite3_stmt *stmt = NULL;
     int rc = sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL);
-    BOOL success = (rc == SQLITE_OK);
-    NSAssert(success, ERR_FAILED_PREP_STMT);
+    if (rc != SQLITE_OK) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_PREP_STMT, rc];
+    }
     // bind data
     [self bindStatment:&stmt withBindings:bindings andTypes:types];
     
     // execute the statement
-    success = (sqlite3_step(stmt) == SQLITE_DONE);
-    NSAssert(success, ERR_FAILED_INSERT_OBJ, self);
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        [NSException raise:ELXFailedOperationException format:ERR_FAILED_INSERT_OBJ, self];
+    }
     
     // retrieve elxid
     if (!updateOnly)
@@ -709,14 +751,22 @@ static NSUInteger _mdatabaseNextID;
     
     NSString *query = [NSString stringWithFormat:@"DELETE FROM %@ WHERE %@ = ?", NSStringFromClass([self class]), NSStringFromSelector(@selector(elxuid))];
     // bind self id
-    NSAssert([self.class openDatabase], ERR_FAILED_OPEN_DB);
+    if (![self.class openDatabase]) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_OPEN_DB];
+    }
     sqlite3_stmt *stmt = nil;
     int rc = sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL);
-    NSAssert((rc == SQLITE_OK), ERR_FAILED_PREP_STMT);
+    if (rc != SQLITE_OK) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_PREP_STMT, rc];
+    }
+    
     sqlite3_bind_int64(stmt, 1, self.elxuid);
     // execute the statement
     rc = sqlite3_step(stmt);
-    NSAssert((rc == SQLITE_DONE), ERR_FAILED_DELETE_OBJ, self);
+    
+    if (rc != SQLITE_DONE) {
+        [NSException raise:ELXFailedOperationException format:ERR_FAILED_DELETE_OBJ, self];
+    }
     // clean up
     sqlite3_finalize(stmt);
     [self.class closeDatabase];
@@ -872,10 +922,15 @@ static NSUInteger _mdatabaseNextID;
             [query appendFormat:@" WHERE %@", condition];
     }
     
-    NSAssert([self openDatabase], ERR_FAILED_OPEN_DB);
+    if (![self openDatabase]) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_OPEN_DB];
+    }
     
     sqlite3_stmt *stmt = nil;
-    NSAssert((sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL) == SQLITE_OK), ERR_FAILED_PREP_STMT);
+    int rc = sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_PREP_STMT, rc];
+    }
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         id obj = [self new];
         // get number of columns and loop through
@@ -901,7 +956,9 @@ static NSUInteger _mdatabaseNextID;
                 
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [obj methodForSelector:setter];
                     void (*func)(id, SEL, unsigned char) = (void *)imp;
                     func(obj, setter, val);
@@ -917,7 +974,9 @@ static NSUInteger _mdatabaseNextID;
                 
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [obj methodForSelector:setter];
                     void (*func)(id, SEL, BOOL) = (void *)imp;
                     func(obj, setter, val);
@@ -930,7 +989,9 @@ static NSUInteger _mdatabaseNextID;
                 int val = sqlite3_column_int(stmt, i);
                 
                 if (useCustomSetter) {
-                    NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [obj methodForSelector:setter];
                     void (*func)(id, SEL, int) = (void *)imp;
                     func(obj, setter, val);
@@ -941,7 +1002,9 @@ static NSUInteger _mdatabaseNextID;
                 long long val = sqlite3_column_int64(stmt, i);
                 
                 if (useCustomSetter) {
-                    NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [obj methodForSelector:setter];
                     void (*func)(id, SEL, long long) = (void *)imp;
                     func(obj, setter, val);
@@ -956,7 +1019,9 @@ static NSUInteger _mdatabaseNextID;
                 
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [obj methodForSelector:setter];
                     void (*func)(id, SEL, char) = (void *)imp;
                     func(obj, setter, val);
@@ -968,7 +1033,9 @@ static NSUInteger _mdatabaseNextID;
                 unsigned int val = (unsigned int)sqlite3_column_int(stmt, i);
                 
                 if (useCustomSetter) {
-                    NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [obj methodForSelector:setter];
                     void (*func)(id, SEL, unsigned int) = (void *)imp;
                     func(obj, setter, val);
@@ -979,7 +1046,9 @@ static NSUInteger _mdatabaseNextID;
                 unsigned long long val = (unsigned long long)sqlite3_column_int64(stmt, i);
                 
                 if (useCustomSetter) {
-                    NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [obj methodForSelector:setter];
                     void (*func)(id, SEL, unsigned long long) = (void *)imp;
                     func(obj, setter, val);
@@ -990,7 +1059,9 @@ static NSUInteger _mdatabaseNextID;
                 double val = sqlite3_column_double(stmt, i);
                 
                 if (useCustomSetter) {
-                    NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [obj methodForSelector:setter];
                     void (*func)(id, SEL, double) = (void *)imp;
                     func(obj, setter, val);
@@ -1006,7 +1077,9 @@ static NSUInteger _mdatabaseNextID;
                 memcpy((char *)val, buf, len * sizeof(const unsigned char));
                 // c string type is not key value coding complaint, thus
                 // directly use setter
-                NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                 IMP imp = [obj methodForSelector:setter];
                 void (*func)(id, SEL, const unsigned char *) = (void *)imp;
                 func(obj, setter, val);
@@ -1022,7 +1095,9 @@ static NSUInteger _mdatabaseNextID;
                 [unarchiver finishDecoding];
                 
                 if (useCustomSetter) {
-                    NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [obj methodForSelector:setter];
                     void (*func)(id, SEL, id) = (void *)imp;
                     func(obj, setter, val);
@@ -1036,7 +1111,9 @@ static NSUInteger _mdatabaseNextID;
                 
                 // Class type is not key value coding complaint, thus
                 // use setter directly
-                NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                 IMP imp = [obj methodForSelector:setter];
                 void (*func)(id, SEL, Class) = (void *)imp;
                 func(obj, setter, val);
@@ -1047,7 +1124,9 @@ static NSUInteger _mdatabaseNextID;
                 
                 // SEL type is not key value coding complaint, thus
                 // use setter directly
-                NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                 IMP imp = [obj methodForSelector:setter];
                 void (*func)(id, SEL, SEL) = (void *)imp;
                 func(obj, setter, val);
@@ -1066,7 +1145,9 @@ static NSUInteger _mdatabaseNextID;
                 
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [obj methodForSelector:setter];
                     void (*func)(id, SEL, NSString *) = (void *)imp;
                     func(obj, setter, val);
@@ -1079,7 +1160,9 @@ static NSUInteger _mdatabaseNextID;
                 NSDate *val = [NSDate dateWithTimeIntervalSinceReferenceDate:inteval];
                 
                 if (useCustomSetter) {
-                    NSAssert([obj respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![obj respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [obj methodForSelector:setter];
                     void (*func)(id, SEL, NSDate *) = (void *)imp;
                     func(obj, setter, val);
@@ -1137,18 +1220,23 @@ static NSUInteger _mdatabaseNextID;
             NSString *subclause = [self parsePredicate:subpredicate];
             [clause appendFormat:@"NOT %@", subclause];
         } else {
-            NSAssert(NO, ERR_ILL_PREDICATE_TYPE);
+            [NSException raise:ELXIllegalPredicateException format:ERR_ILL_PREDICATE_TYPE];
         }
     } else if ([predicate isKindOfClass:[NSComparisonPredicate class]]) {
         NSComparisonPredicate *comparison = (NSComparisonPredicate *)predicate;
-        NSAssert(comparison.comparisonPredicateModifier == NSDirectPredicateModifier, ERR_UNSUPPORTED_PREDICATE_MODIFIER);
+        if (comparison.comparisonPredicateModifier != NSDirectPredicateModifier) {
+            [NSException raise:ELXIllegalPredicateException format:ERR_UNSUPPORTED_PREDICATE_MODIFIER];
+        }
         
         NSExpressionType lhsType = comparison.leftExpression.expressionType;
         NSExpressionType rhsType = comparison.rightExpression.expressionType;
         NSPredicateOperatorType operatorType = comparison.predicateOperatorType;
         BOOL typecheck = ((lhsType == NSKeyPathExpressionType || lhsType == NSConstantValueExpressionType) &&
                           (rhsType == NSKeyPathExpressionType || rhsType == NSConstantValueExpressionType));
-        NSAssert(typecheck, ERR_ILL_COMPARISON_PREDICATE);
+        
+        if (!typecheck) {
+            [NSException raise:ELXIllegalPredicateException format:ERR_ILL_COMPARISON_PREDICATE];
+        }
         
         NSString *lhsclause = [self parseExpression:comparison.leftExpression forOperatorType:operatorType isRHSExpression:NO];
         NSString *rhsclause = [self parseExpression:comparison.rightExpression forOperatorType:operatorType isRHSExpression:YES];
@@ -1178,10 +1266,10 @@ static NSUInteger _mdatabaseNextID;
         } else if (operatorType == NSContainsPredicateOperatorType) {
             [clause appendFormat:@"%@ LIKE '%%%@%%'", lhsclause, rhsclause];
         } else {
-            NSAssert(NO, ERR_UNSUPPORTED_PREDICATE_OPERATOR);
+            [NSException raise:ELXIllegalPredicateException format:ERR_UNSUPPORTED_PREDICATE_OPERATOR];
         }
     } else {
-        NSAssert(NO, ERR_ILL_PREDICATE_TYPE);
+        [NSException raise:ELXIllegalPredicateException format:ERR_ILL_PREDICATE_TYPE];
     }
     
     return clause;
@@ -1205,7 +1293,10 @@ static NSUInteger _mdatabaseNextID;
     if (type == NSConstantValueExpressionType) {
         if (isrhs && operatorType == NSInPredicateOperatorType) {
             // for IN operator, the constant value will be an array of expressions
-            NSAssert([expression.constantValue isKindOfClass:[NSArray class]], ERR_ILL_IN_OPERATOR);
+            if (![expression.constantValue isKindOfClass:[NSArray class]]) {
+                [NSException raise:ELXIllegalPredicateException format:ERR_ILL_IN_OPERATOR];
+            }
+            
             [result appendString:@"("];
             NSArray *expressions = (NSArray *)expression.constantValue;
             for (int i = 0; i < expressions.count; i++) {
@@ -1218,9 +1309,13 @@ static NSUInteger _mdatabaseNextID;
             [result appendString:@")"];
         } else if (isrhs && operatorType == NSBetweenPredicateOperatorType) {
             // for BETWEEN operator, the constant value must be an array of TWO expressions
-            NSAssert([expression.constantValue isKindOfClass:[NSArray class]], ERR_ILL_BETWEEN_OPERATOR);
+            if (![expression.constantValue isKindOfClass:[NSArray class]]) {
+                [NSException raise:ELXIllegalPredicateException format:ERR_ILL_BETWEEN_OPERATOR];
+            }
             NSArray *expressions = (NSArray *)expression.constantValue;
-            NSAssert((expressions.count == 2), ERR_ILL_BETWEEN_OPERATOR);
+            if (expressions.count != 2) {
+                [NSException raise:ELXIllegalPredicateException format:ERR_ILL_BETWEEN_OPERATOR];
+            }
             NSString *leftclause = ([expressions[0] isKindOfClass:[NSExpression class]]) ?
                     [self parseExpression:expressions[0] forOperatorType:operatorType isRHSExpression:isrhs] :
                     [expressions[0] description];
@@ -1237,8 +1332,8 @@ static NSUInteger _mdatabaseNextID;
             Class cfboolean = objc_lookUpClass("__NSCFBoolean");
             BOOL charencoding = (strcmp(@encode(BOOL), @encode(char)) == 0);
             if ([expression.constantValue isKindOfClass:cfboolean] && charencoding) {
-                BOOL value = [(NSNumber *)expression.constantValue boolValue];
-                [result appendFormat:@"%c", (char)value];
+                // special case for BOOL -- might change later
+                [result appendFormat:@"%@", [expression.constantValue description]];
             } else {
                 // we also need to check whether constantValue is type String
                 // because we need to add quotation around strings, but not
@@ -1261,7 +1356,7 @@ static NSUInteger _mdatabaseNextID;
             [result appendFormat:@"'%@'", expression.keyPath];
         }
     } else {
-        NSAssert(NO, ERR_ILL_COMPARISON_PREDICATE);
+        [NSException raise:ELXIllegalPredicateException format:ERR_ILL_COMPARISON_PREDICATE];
     }
     
     return result;
@@ -1312,10 +1407,17 @@ static NSUInteger _mdatabaseNextID;
     free(properties);
     free(rproperties);
     
-    NSAssert([self openDatabase], ERR_FAILED_OPEN_DB);
+    if (![self openDatabase]) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_OPEN_DB];
+    }
+    
     char *err;
     int rc = sqlite3_exec(_database, query.UTF8String, NULL, NULL, &err);
-    NSAssert(rc == SQLITE_OK, ERR_FAILED_INIT_TABLE, NSStringFromClass([self class]));
+    
+    if (rc != SQLITE_OK) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_INIT_TABLE, NSStringFromClass([self class])];
+    }
+    
     [self closeDatabase];
 }
 
@@ -1327,10 +1429,15 @@ static NSUInteger _mdatabaseNextID;
     BOOL exists = NO;
     NSString *query = [NSString stringWithFormat:@"SELECT 'name' FROM sqlite_master WHERE type='table' AND name='%@'", NSStringFromClass([self class])];
     
-    NSAssert([self openDatabase], ERR_FAILED_OPEN_DB);
+    if (![self openDatabase]) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_OPEN_DB];
+    }
     sqlite3_stmt *stmt = nil;
-    BOOL success = (sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL) == SQLITE_OK);
-    NSAssert(success, ERR_FAILED_PREP_STMT);
+    int rc = sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_PREP_STMT, rc];
+    }
+    
     if (sqlite3_step(stmt) == SQLITE_ROW) exists = YES;
     sqlite3_finalize(stmt);
     [self closeDatabase];
@@ -1368,11 +1475,16 @@ static NSUInteger _mdatabaseNextID;
     // clean up
     free(properties);
     // check against current schema
-    NSAssert([self openDatabase], ERR_FAILED_OPEN_DB);
+    if (![self openDatabase]) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_OPEN_DB];
+    }
     NSString *query = [NSString stringWithFormat:@"PRAGMA table_info('%@')", NSStringFromClass([self class])];
     sqlite3_stmt *stmt = nil;
     int rc = sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL);
-    NSAssert((rc == SQLITE_OK), ERR_FAILED_PREP_STMT);
+    if (rc != SQLITE_OK) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_PREP_STMT, rc];
+    }
+    
     // step through columns
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         NSString *colname = [NSString stringWithUTF8String:(const char *)sqlite3_column_text(stmt, 1)];
@@ -1448,7 +1560,9 @@ static NSUInteger _mdatabaseNextID;
         if (success) success = (sqlite3_exec(_database, qrst.UTF8String, NULL, NULL, &err) == SQLITE_OK);
         if (success) success = (sqlite3_exec(_database, qdropt.UTF8String, NULL, NULL, &err) == SQLITE_OK);
         
-        NSAssert(success, ERR_FAILED_UPDATE_SCHEMA, err);
+        if (!success) {
+            [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_UPDATE_SCHEMA, err];
+        }
     }
     
     // now insert
@@ -1471,7 +1585,9 @@ static NSUInteger _mdatabaseNextID;
             }
         }
         
-        NSAssert(success, ERR_FAILED_UPDATE_SCHEMA, err);
+        if (!success) {
+            [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_UPDATE_SCHEMA, err];
+        }
     }
     // clean up
     sqlite3_finalize(stmt);
@@ -1592,7 +1708,9 @@ static NSUInteger _mdatabaseNextID;
                                                     error:nil];
     const char *path = [[self.class databaseFile] UTF8String];
     int rc = sqlite3_open(path, &_database);
-    NSAssert((rc == SQLITE_OK), ERR_FAILED_CREATE_DB);
+    if (rc != SQLITE_OK) {
+        [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_CREATE_DB, rc];
+    }
 }
 
 /**
@@ -1716,7 +1834,9 @@ static NSUInteger _mdatabaseNextID;
                 unsigned char val = [buf unsignedCharValue];
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [self methodForSelector:setter];
                     void (*func)(id, SEL, unsigned char) = (void *)imp;
                     func(self, setter, val);
@@ -1728,7 +1848,9 @@ static NSUInteger _mdatabaseNextID;
                 BOOL val = [aDecoder decodeBoolForKey:key];
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [self methodForSelector:setter];
                     void (*func)(id, SEL, BOOL) = (void *)imp;
                     func(self, setter, val);
@@ -1740,7 +1862,9 @@ static NSUInteger _mdatabaseNextID;
                 int val = [aDecoder decodeIntForKey:key];
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [self methodForSelector:setter];
                     void (*func)(id, SEL, int) = (void *)imp;
                     func(self, setter, val);
@@ -1752,7 +1876,9 @@ static NSUInteger _mdatabaseNextID;
                 long long val = [aDecoder decodeInt64ForKey:key];
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [self methodForSelector:setter];
                     void (*func)(id, SEL, long long) = (void *)imp;
                     func(self, setter, val);
@@ -1766,7 +1892,9 @@ static NSUInteger _mdatabaseNextID;
                 char val = [buf charValue];
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [self methodForSelector:setter];
                     void (*func)(id, SEL, char) = (void *)imp;
                     func(self, setter, val);
@@ -1778,7 +1906,9 @@ static NSUInteger _mdatabaseNextID;
                 unsigned int val = (unsigned int)[aDecoder decodeIntForKey:key];
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [self methodForSelector:setter];
                     void (*func)(id, SEL, unsigned int) = (void *)imp;
                     func(self, setter, val);
@@ -1790,7 +1920,9 @@ static NSUInteger _mdatabaseNextID;
                 unsigned long long val = (unsigned long long)[aDecoder decodeInt64ForKey:key];
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [self methodForSelector:setter];
                     void (*func)(id, SEL, unsigned long long) = (void *)imp;
                     func(self, setter, val);
@@ -1802,7 +1934,9 @@ static NSUInteger _mdatabaseNextID;
                 double val = [aDecoder decodeDoubleForKey:key];
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [self methodForSelector:setter];
                     void (*func)(id, SEL, double) = (void *)imp;
                     func(self, setter, val);
@@ -1815,7 +1949,9 @@ static NSUInteger _mdatabaseNextID;
                 if (!buf) continue;
                 const char *val = buf.UTF8String;
                 if (val == NULL) continue;
-                NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                 IMP imp = [self methodForSelector:setter];
                 void (*func)(id, SEL, const char *) = (void *)imp;
                 func(self, setter, val);
@@ -1826,7 +1962,9 @@ static NSUInteger _mdatabaseNextID;
                 id val = [aDecoder decodeObjectOfClass:cls forKey:key];
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [self methodForSelector:setter];
                     void (*func)(id, SEL, id) = (void *)imp;
                     func(self, setter, val);
@@ -1838,7 +1976,9 @@ static NSUInteger _mdatabaseNextID;
                 NSString *classname = [aDecoder decodeObjectOfClass:[NSString class] forKey:key];
                 if (!classname) continue;
                 Class val = objc_lookUpClass(classname.UTF8String);
-                NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                 IMP imp = [self methodForSelector:setter];
                 void (*func)(id, SEL, Class) = (void *)imp;
                 func(self, setter, val);
@@ -1849,7 +1989,9 @@ static NSUInteger _mdatabaseNextID;
                 
                 // SEL type is not key value coding complaint, thus
                 // use setter directly
-                NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                 IMP imp = [self methodForSelector:setter];
                 void (*func)(id, SEL, SEL) = (void *)imp;
                 func(self, setter, val);
@@ -1866,7 +2008,9 @@ static NSUInteger _mdatabaseNextID;
                 NSString *val = [aDecoder decodeObjectOfClass:[NSString class] forKey:key];
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [self methodForSelector:setter];
                     void (*func)(id, SEL, NSString *) = (void *)imp;
                     func(self, setter, val);
@@ -1878,7 +2022,9 @@ static NSUInteger _mdatabaseNextID;
                 NSDate *val = [aDecoder decodeObjectForKey:key];
                 // if there is custom setter, try custome setter first
                 if (useCustomSetter) {
-                    NSAssert([self respondsToSelector:setter], ERR_INVALID_SETTER);
+                    if (![self respondsToSelector:setter]) {
+                        [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_SETTER];
+                    }
                     IMP imp = [self methodForSelector:setter];
                     void (*func)(id, SEL, NSDate *) = (void *)imp;
                     func(self, setter, val);
@@ -1918,7 +2064,9 @@ static NSUInteger _mdatabaseNextID;
         if (type == ELXObjectTypeUnsignedChar) {
             unsigned char val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 unsigned char (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -1931,7 +2079,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeBOOL) {
             BOOL val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 BOOL (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -1942,7 +2092,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeShort || type == ELXObjectTypeInt) {
             int val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 int (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -1953,7 +2105,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeLong || type == ELXObjectTypeLongLong) {
             long long val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 long long (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -1964,7 +2118,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeChar) {
             char val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 char (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -1977,7 +2133,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeUnsignedShort || type == ELXObjectTypeUnsignedInt) {
             unsigned int val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 unsigned int (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -1988,7 +2146,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeUnsignedLong || type == ELXObjectTypeUnsignedLongLong) {
             unsigned long long val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 unsigned long long (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -1999,7 +2159,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeFloat || type == ELXObjectTypeDouble) {
             double val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 double (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -2011,7 +2173,9 @@ static NSUInteger _mdatabaseNextID;
             const char *val = NULL;
             NSString *value = nil;
             
-            NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+            if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
             IMP imp = [self methodForSelector:getter];
             const char *(*func)(id, SEL) = (void *)imp;
             val = func(self, getter);
@@ -2022,7 +2186,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeObject) {
             id val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 id (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -2051,7 +2217,9 @@ static NSUInteger _mdatabaseNextID;
             Class val = NULL;
             NSValue *value;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 Class (*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -2066,7 +2234,9 @@ static NSUInteger _mdatabaseNextID;
             SEL val = NULL;
             NSData *value = nil;
             
-            NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+            if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
             IMP imp = [self methodForSelector:getter];
             SEL (*func)(id, SEL) = (void *)imp;
             val = func(self, getter);
@@ -2084,7 +2254,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeString) {
             NSString *val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 NSString *(*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);
@@ -2095,7 +2267,9 @@ static NSUInteger _mdatabaseNextID;
         } else if (type == ELXObjectTypeDateTime) {
             NSDate *val;
             if (useCustomeGetter) {
-                NSAssert([self respondsToSelector:getter], ERR_INVALID_GETTER);
+                if (![self respondsToSelector:getter]) {
+                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+                }
                 IMP imp = [self methodForSelector:getter];
                 NSDate *(*func)(id, SEL) = (void *)imp;
                 val = func(self, getter);

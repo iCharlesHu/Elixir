@@ -19,6 +19,7 @@ Then, simply run `carthage update` under the same working directory. The resulta
 - `./Carthage/Build/iOS/Elixir.framework`
 
 You can simple drag the framework(s) into your project.
+
 **NOTE:** In your Target > General tab, make sure you have Elixir.framework listed under Embedded Binaries *and* Linked Frameworks and Libraries.
 
 #### CocoaPods
