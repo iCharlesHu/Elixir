@@ -74,8 +74,7 @@
 				479F50B21C61B5EF00EF088D /* Info.plist */,
 			);
 			name = Source;
-			path = ..;
-			sourceTree = "<group>";
+			sourceTree = SOURCE_ROOT;
 		};
 		47D41D131C60F36600B4F5C0 /* Elixir */ = {
 			isa = PBXGroup;
