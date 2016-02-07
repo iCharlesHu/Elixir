@@ -1,5 +1,5 @@
 # Elixir
-[![Build Status](https://travis-ci.org/iCharlesHu/Elixir.svg?branch=master)](https://travis-ci.org/iCharlesHu/Elixir) [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage) 
+[![Build Status](https://travis-ci.org/iCharlesHu/Elixir.svg?branch=master)](https://travis-ci.org/iCharlesHu/Elixir) [![Cocoapods Compatible](https://img.shields.io/cocoapods/v/Elixir.svg)](http://cocoadocs.org/docsets/Elixir/0.1.2/) [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage) 
 
 **TL;DR:** Elixir is a simple and lightweight library that lets you easily persist your objects (i.e. make them live forever*) and query objects.
 
@@ -25,7 +25,11 @@ You can simple drag the framework(s) into your project.
 **NOTE:** In your Target > General tab, make sure you have Elixir.framework listed under Embedded Binaries *and* Linked Frameworks and Libraries.
 
 #### CocoaPods
-(coming later)
+To use Elixir with [CocoaPods](http://cocoapods.org), simply include this in your Podfile:
+````ruby
+use_frameworks! # Add this line if you are targeting iOS 8+ and want to use dynamic framework (recommended)
+pod 'Elixir'
+````
 
 #### Manual
 Since there are only 2 files, you can easily include Elixir adding the source files directly.
