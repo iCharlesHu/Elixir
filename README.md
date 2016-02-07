@@ -9,6 +9,8 @@
 Let's face it: most of times, we need some of our objects to live just longer than the running application itself. Backend by SQLite, Elixir is a simple (only 4 core APIs) and lightweight (only 2 files, around 2000 lines of code) persistent solution. It fully utilizes Objective-C's runtime environment to automatically save and load object properties to and from a sqlite database with minimum user interaction; it provides object query support with the NSPredicate interface, and most importantly, with simplicity as the main design objective, Elixir is very easy to use. Elixir is perfect for the projects that are too complex to use NSUserDefault, but not complicated enough to require the convolution of CoreData or raw SQL.
 
 ## Installation
+**NOTE :** Elixir uses the newest Objective-C features such as *Generics* and *Nullability annotation* (see Apple's [documentation](https://developer.apple.com/library/ios/documentation/DeveloperTools/Conceptual/WhatsNewXcode/Articles/xcode_7_0.html), you will need Xcode 7 to use Elixir.
+
 #### Carthage
 Elixir is [Carthage](https://github.com/Carthage/Carthage) compatible. To include it add the following line to your `Cartfile`
 ```bash
