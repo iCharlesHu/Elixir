@@ -67,7 +67,10 @@ You can use NSPredicate to query your objects (see Apple's [documentation](https
 
 These methods will return an empty `NSArray` if no objects found.
 
-Note that although SQL does not enforce column name (property name) to be the left-hand-side of the comparison, some predicates (for example, `BETWEEN` and `IN`) do emphasis this order. Therefore, it's always a good practice to put property name as the left-hand-side and the value you are comparing to as the right hand side when defining a predicate.
+##### Notes on Handling NSPredicate
+- Although SQL does not enforce column name (property name) to be the left-hand-side of the comparison, some predicates (for example, `BETWEEN` and `IN`) do emphasis this order. Therefore, it's always a good practice to put property name as the left-hand-side and the value you are comparing to as the right hand side when defining a predicate.
+- In OS X and 32-bit iOS, `BOOL` type is typedefed from `signed char` in objc.h, and `YES` is simply `((BOOL)1)`, `NO` is simply `((BOOL)0)`. This means at run time, Elixir will not be able to distinguish `BOOL` and `char`, and `BOOL` is stored in its native char value `'\1' and `'\0'`, *NOT* `'1'` and `'0'`! Therefore, when comparing `BOOL` values, please use `NSPredicate` literals `YES` (or `TRUE`) and `NO` (or `FALSE`), instead of "1" and "0". In 64-bit iOS, the `BOOL` values *are* stored as "1" and "0", but in general it's a good idea to stick with the defined `NSPredicate` literals.
+- Please put single quotation marks "'" around the literal strings when you are constructing a predicate. They are not strictly required in most cases, but it's a good practice to use them.
 
 ## In-Memory-Only Mode
 You can set a object to be saved in memory only by invoking
@@ -85,9 +88,13 @@ There are currently two `ELXObjectArchiveOptions`:
 The default value is `ELXObjectArchiveOptionManual`.
 
 ### Database File Path
+```obj-c
++ (nonnull NSString *)databasePath;
+```
 On OS X, the default database file path for Elixir is `~/Library/Application Support/com.iCharlesHu.Elixir/base/elixir.db` (`NSApplicationSupportDirectory` with `NSUserDomainMask`).
 
 On iOS, the default database file path is (within App's sandbox): `/Documents/base/elixir.db` (`NSDocumentDirectory` with `NSUserDomainMask`).
+
 You can change the database file path by **overriding** this method.
 
 ## Misc
@@ -103,13 +110,14 @@ By design, Elixir will only store object properties, NOT Ivars. Therefore, you c
 ### Schema Update
 Elixir will automatically check the current list of properties against saved table schema, and add/delete columns when needed. However, since deleting a column is very costly and it might introduce data lose, please try to **avoid** deleting columns.
 
-
 **NOTE:** do *NOT* **rename** object properties. Elixir will treat it as a new property and delete the old column, which will cause the loss of data.
 
 ### Limitations
 The primary design goal Elixir is to be *lightweight* and *simple to use*. Therefore, some functionalities are sacrificed for the simplicity. Specifically:
 - `struct`, `union`, `array`, and `pointer` types are *NOT* supported. You can still use them as properties, but they will not be saved to database. The reason behind this decision is that Objective-C forbits the creation of an unknown struct (or union) at runtime. However, you can pack your structs to `NSData` or `NSValue` and save them instead.
 - At this stage, all the `NSCoding` conforming objects (except `NSDate` and `NSString`, but including *all* the collection types) are serialized and stored as `blob` in the SQL table. This means predicate comparison on object properties will *NOT* work. Predicate comparisons mostly work on strings and numeric properties.
+
+In future versions, Elixir will support archiving objects recursively.
 
 ## License
 This code is distributed under the terms and conditions of the MIT license.

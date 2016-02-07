@@ -99,6 +99,23 @@ static NSDictionary<NSString *, NSNumber *> * __nonnull ELXObjectPropertyTypeMap
 static NSDictionary<NSNumber *, NSString *> * __nonnull ELXObjectPropertySQLTypeMap;
 static NSMutableArray<NSString *> * __nonnull ELXObjectPropertyNameTable;
 
+#pragma mark - ELXQueryBinding
+@interface ELXQueryBinding : NSObject
+@property (nonatomic, strong) id value;
+@property (nonatomic, strong) NSNumber *type;
+@end
+
+@implementation ELXQueryBinding
++ (ELXQueryBinding *)bindingWithValue:(id)value type:(NSNumber *)type
+{
+    ELXQueryBinding *binding = [self new];
+    binding.value = value;
+    binding.type = type;
+    return binding;
+}
+@end
+
+#pragma mark - ELXObject
 @interface ELXObject ()
 @property (nonatomic) ELXObjectArchiveOption archiveOption;
 @property (nonatomic) NSUInteger elxuid;
@@ -111,6 +128,7 @@ static NSMutableArray<NSString *> * __nonnull ELXObjectPropertyNameTable;
 
 static sqlite3 *_database;
 static NSMutableArray<ELXObject *> *_mdatabase;
+static NSMutableArray<ELXQueryBinding *>  *_globalQueryBindings;
 static BOOL _classTableExists = NO;
 static BOOL _schemaUpdated = NO;
 static NSUInteger _mdatabaseNextID;
@@ -185,10 +203,8 @@ static NSUInteger _mdatabaseNextID;
     NSMutableString *query1 = [NSMutableString stringWithFormat:@"INSERT INTO '%@' (", NSStringFromClass([self class])];
     NSMutableString *query2 = [NSMutableString stringWithFormat:@") VALUES ("];
     NSMutableString *updateQuery = [NSMutableString stringWithFormat:@"UPDATE %@ SET ", NSStringFromClass([self class])];
-    // get list of properties and add them to query
-    NSMutableArray *bindings = [NSMutableArray new];
-    NSMutableArray *types = [NSMutableArray new];
     
+    // get list of properties and add them to query
     unsigned int pcount;
     objc_property_t *properties = class_copyPropertyList([self class], &pcount);
     unsigned int rcount;
@@ -229,8 +245,7 @@ static NSUInteger _mdatabaseNextID;
             }
             
             NSString *value = [NSString stringWithFormat:@"%c", val];
-            [bindings addObject:value];
-            [types addObject:@(type)];
+            [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -256,8 +271,7 @@ static NSUInteger _mdatabaseNextID;
             }
             
             NSNumber *value = [NSNumber numberWithInt:val];
-            [bindings addObject:value];
-            [types addObject:@(type)];
+            [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -283,8 +297,7 @@ static NSUInteger _mdatabaseNextID;
             }
             
             NSNumber *value = [NSNumber numberWithLongLong:val];
-            [bindings addObject:value];
-            [types addObject:@(type)];
+            [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -310,8 +323,7 @@ static NSUInteger _mdatabaseNextID;
             }
             
             NSString *value = [NSString stringWithFormat:@"%c", val];
-            [bindings addObject:value];
-            [types addObject:@(type)];
+            [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -339,8 +351,7 @@ static NSUInteger _mdatabaseNextID;
             }
             
             NSNumber *value = (val) ? [NSNumber numberWithInt:1] : [NSNumber numberWithInt:0];
-            [bindings addObject:value];
-            [types addObject:@(type)];
+            [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -366,8 +377,7 @@ static NSUInteger _mdatabaseNextID;
             }
             
             NSNumber *value = [NSNumber numberWithUnsignedInt:val];
-            [bindings addObject:value];
-            [types addObject:@(type)];
+            [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -393,8 +403,7 @@ static NSUInteger _mdatabaseNextID;
             }
             
             NSNumber *value = [NSNumber numberWithUnsignedLongLong:val];
-            [bindings addObject:value];
-            [types addObject:@(type)];
+            [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -420,8 +429,7 @@ static NSUInteger _mdatabaseNextID;
             }
             
             NSNumber *value = [NSNumber numberWithDouble:val];
-            [bindings addObject:value];
-            [types addObject:@(type)];
+            [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -450,13 +458,11 @@ static NSUInteger _mdatabaseNextID;
             
             if (value) {
                 value = (value == nil) ? [NSString stringWithUTF8String:val] : value;
-                [bindings addObject:value];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             } else {
                 // NULL C string
-                [bindings addObject:[NSNull null]];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:[NSNull null] type:@(type)]];
             }
-            
-            [types addObject:@(type)];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -502,13 +508,11 @@ static NSUInteger _mdatabaseNextID;
                 [archiver encodeObject:val forKey:kELXObjectSerializationKey];
                 [archiver finishEncoding];
                 
-                [bindings addObject:value];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             } else {
                 // nil object
-                [bindings addObject:[NSNull null]];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:[NSNull null] type:@(type)]];
             }
-            
-            [types addObject:@(type)];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -538,11 +542,10 @@ static NSUInteger _mdatabaseNextID;
             NSString *valname = NSStringFromClass(val);
             
             if (valname) {
-                [bindings addObject:NSStringFromClass(val)];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:NSStringFromClass(val) type:@(type)]];
             } else {
-                [bindings addObject:[NSNull null]];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:[NSNull null] type:@(type)]];
             }
-            [types addObject:@(type)];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -570,12 +573,10 @@ static NSUInteger _mdatabaseNextID;
             value = (val != NULL) ? [NSValue valueWithBytes:&val objCType:@encode(SEL)] : value;
             
             if (value) {
-                [bindings addObject:value];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             } else {
-                [bindings addObject:[NSNull null]];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:[NSNull null] type:@(type)]];
             }
-            
-            [types addObject:@(type)];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -609,12 +610,10 @@ static NSUInteger _mdatabaseNextID;
             value = (val != NULL) ? [NSValue valueWithBytes:&val objCType:@encode(void *)] : value;
             
             if (value) {
-                [bindings addObject:value];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             } else {
-                [bindings addObject:[NSNull null]];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:[NSNull null] type:@(type)]];
             }
-            
-            [types addObject:@(type)];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -640,12 +639,10 @@ static NSUInteger _mdatabaseNextID;
             }
             
             if (value) {
-                [bindings addObject:value];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             } else {
-                [bindings addObject:[NSNull null]];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:[NSNull null] type:@(type)]];
             }
-            
-            [types addObject:@(type)];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -673,11 +670,10 @@ static NSUInteger _mdatabaseNextID;
             
             if (val) {
                 NSNumber *value = [NSNumber numberWithDouble:[val timeIntervalSinceReferenceDate]];
-                [bindings addObject:value];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:value type:@(type)]];
             } else {
-                [bindings addObject:[NSNull null]];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:[NSNull null] type:@(type)]];
             }
-            [types addObject:@(type)];
             
             // append query
             [query1 appendFormat:@"\"%@\"", name];
@@ -700,8 +696,7 @@ static NSUInteger _mdatabaseNextID;
     NSString *query;
     if (updateOnly) {
         query = [NSString stringWithFormat:@"%@ WHERE %@ = ?", updateQuery, NSStringFromSelector(@selector(elxuid))];
-        [bindings addObject:[NSNumber numberWithUnsignedInteger:self.elxuid]];
-        [types addObject:@(ELXObjectTypeUnsignedLong)];
+        [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:[NSNumber numberWithUnsignedInteger:self.elxuid] type:@(ELXObjectTypeUnsignedLong)]];
     } else {
         query = [NSString stringWithFormat:@"%@%@", query1, query2];
     }
@@ -716,7 +711,7 @@ static NSUInteger _mdatabaseNextID;
         [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_PREP_STMT, rc];
     }
     // bind data
-    [self bindStatment:&stmt withBindings:bindings andTypes:types];
+    [self.class bindStatment:&stmt withBindings:_globalQueryBindings];
     
     // execute the statement
     rc = sqlite3_step(stmt);
@@ -841,6 +836,10 @@ static NSUInteger _mdatabaseNextID;
         _mdatabase = [NSMutableArray new];
     }
     
+    if (!_globalQueryBindings) {
+        _globalQueryBindings = [NSMutableArray new];
+    }
+    
     _mdatabaseNextID = NSUIntegerMax - 1;
     
     if (!ELXObjectPropertyNameTable) {
@@ -931,6 +930,11 @@ static NSUInteger _mdatabaseNextID;
     if (rc != SQLITE_OK) {
         [NSException raise:ELXFailedSQLiteOperationException format:ERR_FAILED_PREP_STMT, rc];
     }
+    // bind data if any
+    if (_globalQueryBindings.count != 0) {
+        [self bindStatment:&stmt withBindings:_globalQueryBindings];
+    }
+    
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         id obj = [self new];
         // get number of columns and loop through
@@ -1332,14 +1336,15 @@ static NSUInteger _mdatabaseNextID;
             Class cfboolean = objc_lookUpClass("__NSCFBoolean");
             BOOL charencoding = (strcmp(@encode(BOOL), @encode(char)) == 0);
             if ([expression.constantValue isKindOfClass:cfboolean] && charencoding) {
-                // special case for BOOL -- might change later
-                [result appendFormat:@"%@", [expression.constantValue description]];
+                // special case for BOOL: bind plain char text
+                BOOL value = [(NSNumber *)expression.constantValue boolValue];
+                [result appendString:@"?"];
+                [_globalQueryBindings addObject:[ELXQueryBinding bindingWithValue:[NSString stringWithFormat:@"%c", (char)value] type:@(ELXObjectTypeChar)]];
             } else {
                 // we also need to check whether constantValue is type String
                 // because we need to add quotation around strings, but not
                 // around column names
-                Class nscfstring = objc_lookUpClass("__NSCFString");
-                if ([expression.constantValue isKindOfClass:nscfstring] && ![ELXObjectPropertyNameTable containsObject:[expression.constantValue description]] &&
+                if ([expression.constantValue isKindOfClass:[NSString class]] && ![ELXObjectPropertyNameTable containsObject:[expression.constantValue description]] &&
                     !noquote) {
                     // string type but not column name, add quotation
                     [result appendFormat:@"'%@'", expression.constantValue];
@@ -1350,7 +1355,7 @@ static NSUInteger _mdatabaseNextID;
         }
     } else if (type == NSKeyPathExpressionType) {
         // if it's not a column name, don't add quotation
-        if ([ELXObjectPropertyNameTable containsObject:expression.keyPath] || !noquote) {
+        if ([ELXObjectPropertyNameTable containsObject:expression.keyPath] || noquote) {
             [result appendFormat:@"%@", expression.keyPath];
         } else {
             [result appendFormat:@"'%@'", expression.keyPath];
@@ -1651,12 +1656,15 @@ static NSUInteger _mdatabaseNextID;
  * @param bindings: an array of bindings
  * @param types: the types of the bindings
  */
-- (void)bindStatment:(sqlite3_stmt **)statement withBindings:(nonnull NSArray<id> *)bindings andTypes:(nonnull NSArray<NSNumber *> *)types
++ (void)bindStatment:(sqlite3_stmt **)statement withBindings:(nonnull NSMutableArray<ELXQueryBinding *> *)bindings
 {
+    if (bindings.count == 0) return;
+    
     sqlite3_stmt *stmt = *statement;
     for (NSInteger i = 0; i < bindings.count; i++) {
-        id binding = bindings[i];
-        ELXObjectType type = [(NSNumber *)types[i] unsignedIntegerValue];
+        ELXQueryBinding *qb = bindings[i];
+        id binding = qb.value;
+        ELXObjectType type = [qb.type unsignedIntegerValue];
         if ([binding isKindOfClass:[NSNumber class]]) {
             if (type == ELXObjectTypeShort || type == ELXObjectTypeInt ||
                 type == ELXObjectTypeUnsignedShort || type == ELXObjectTypeUnsignedInt) {
@@ -1693,6 +1701,9 @@ static NSUInteger _mdatabaseNextID;
             sqlite3_bind_null(stmt, pos);
         }
     }
+    
+    // cleanup query bindings
+    [bindings removeAllObjects];
 }
 
 /**
