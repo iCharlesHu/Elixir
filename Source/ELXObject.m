@@ -58,6 +58,8 @@ static NSString * const __nonnull kELXObjectPropertyClassKey = @"ELXObjectProper
 static NSString * const __nonnull kELXObjectSerializationKey = @"ELXObjectSerializationKey";
 static NSString * const __nonnull kELXObjectUnsupportedKey = @"ELXObjectUnsupportedKey";
 
+static NSString * const __nonnull ELXObjectOperationQueueName = @"ELXObjectOperationQueue";
+
 /**
  * Error messages - Property related
  */
@@ -132,6 +134,8 @@ static NSMutableArray<ELXQueryBinding *>  *_globalQueryBindings;
 static BOOL _classTableExists = NO;
 static BOOL _schemaUpdated = NO;
 static NSUInteger _mdatabaseNextID;
+// Thread safety: all operations are perfomed on this thread
+dispatch_queue_t _operationQueue;
 
 #pragma mark - Query Objects
 /**
@@ -143,8 +147,11 @@ static NSUInteger _mdatabaseNextID;
 + (nonnull NSArray<ELXObject *> *)allObjects
 {
     [self commonInit];
-    NSMutableArray *results = [self queryObject:nil];
-    [results addObjectsFromArray:_mdatabase];
+    __block NSMutableArray *results = [NSMutableArray new];
+    dispatch_sync(_operationQueue, ^{
+        results = [self queryObject:nil];
+        [results addObjectsFromArray:_mdatabase];
+    });
     return results;
 }
 
@@ -174,8 +181,11 @@ static NSUInteger _mdatabaseNextID;
 + (nonnull NSArray<ELXObject *> *)objectsWithPredicate:(NSPredicate *)predicate
 {
     [self commonInit];
-    NSMutableArray *results = [self queryObject:predicate];
-    [results addObjectsFromArray:[_mdatabase filteredArrayUsingPredicate:predicate]];
+    __block NSMutableArray *results = [NSMutableArray new];
+    dispatch_sync(_operationQueue, ^{
+        results = [self queryObject:predicate];
+        [results addObjectsFromArray:[_mdatabase filteredArrayUsingPredicate:predicate]];
+    });
     
     return results;
 }
@@ -184,11 +194,164 @@ static NSUInteger _mdatabaseNextID;
 /**
  * Object will be written to on-disk or in-memory database when invoked.
  * This method is automatically invoked at -(void)delloc with ELXObjectArchiveOptionOnObjectDelloc option.
+ * This method synchronously call -(void)archiveObjectIMP
  */
 - (void)archiveObject
 {
     [self.class commonInit];
     
+    dispatch_sync(_operationQueue, ^{
+        [self archiveObjectIMP];
+    });
+}
+
+/**
+ * Asynchronously write the object to database
+ * This method will return immediately, possibly before the writing has completed.
+ */
+- (void)archiveObjectAsynchronous
+{
+    dispatch_async(_operationQueue, ^{
+        [self archiveObjectIMP];
+    });
+}
+
+#pragma mark - Delete Object
+/**
+ * Remove the object from on-disk or in-memory database
+ * NOTE: if an object is saved both on-disk and in-memory, only the version it's currently in will be deleted.
+ */
+- (void)deleteObject
+{
+    dispatch_sync(_operationQueue, ^{
+        [self deleteObjectIMP];
+    });
+}
+
+#pragma mark - In Memory Only Behavior
+/**
+ * If set to YES, the current object will be in-memory-only.
+ * This means all the changes will only be buffered in memory, but you can still query the object.
+ * NOTE: if you set a object to be in-memory-only after archiving it, the further changes will
+ * be cached in memory only.
+ *
+ * @param inMemoryOnly: whether this object should be in-memory-only
+ */
+- (void)setInMemoryOnly:(BOOL)inMemoryOnly
+{
+    @synchronized(self) {
+        _inMemoryOnly = inMemoryOnly;
+    }
+}
+
+#pragma mark - Configuration
+/**
+ * Override this method to change the path to the on-disk database file.
+ * WARNING: Do NOT change this path after you have already saved items to database
+ * because the data base will NOT be relocated
+ *
+ * @return NSSting *: the string path to the on-disk database file
+ */
+#if TARGET_OS_IPHONE
++ (nonnull NSString *)databasePath
+{
+    NSString *basePath = (NSString *)[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+    return [basePath stringByAppendingString:ELXDefaultDatabaseFolder];
+}
+#else
++ (nonnull NSString *)databasePath
+{
+    NSString *basePath = (NSString *)[NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES) firstObject];
+    return [basePath stringByAppendingString:ELXDefaultDatabaseFolder];
+}
+#endif
+
+/**
+ * Append the name of the database file to the end of the database path.
+ *
+ * @return NSString *: the entire path to the database file, including the file name
+ */
++ (nonnull NSString *)databaseFile
+{
+    return [[self databasePath] stringByAppendingString:ELXDefaultDatabaseFile];
+}
+
+/**
+ * Set the archive option to the current object. See ELXObjectArchiveOption ENUM for the options.
+ * The default value is ELXObjectArchiveOptionManual.
+ *
+ * @param ELXObjectArchiveOption: the new archive option to be set
+ */
+- (void)setArchiveOption:(ELXObjectArchiveOption)archiveOption
+{
+    _archiveOption = archiveOption;
+}
+
+#pragma mark - Private Utils
+/**
+ * Common initialize code for the class
+ */
++ (void)commonInit
+{
+    [self createDatabaseFile];
+    
+    if (!_mdatabase) {
+        _mdatabase = [NSMutableArray new];
+    }
+    
+    if (!_globalQueryBindings) {
+        _globalQueryBindings = [NSMutableArray new];
+    }
+    
+    if (!_operationQueue) {
+        _operationQueue = dispatch_queue_create(ELXObjectOperationQueueName.UTF8String, DISPATCH_QUEUE_SERIAL);
+    }
+    
+    _mdatabaseNextID = NSUIntegerMax - 1;
+    
+    if (!ELXObjectPropertyNameTable) {
+        ELXObjectPropertyNameTable = [NSMutableArray new];
+    }
+    
+    if (!ELXObjectPropertyTypeMap) {
+        ELXObjectPropertyTypeMap = @{@"c": @(ELXObjectTypeChar), @"i": @(ELXObjectTypeInt), @"s": @(ELXObjectTypeShort),
+                                     @"l": @(ELXObjectTypeLong), @"q": @(ELXObjectTypeLongLong), @"C": @(ELXObjectTypeUnsignedChar),
+                                     @"I": @(ELXObjectTypeUnsignedInt), @"S": @(ELXObjectTypeUnsignedShort), @"L": @(ELXObjectTypeUnsignedLong),
+                                     @"Q": @(ELXObjectTypeUnsignedLongLong), @"f": @(ELXObjectTypeFloat), @"d": @(ELXObjectTypeDouble),
+                                     @"*": @(ELXObjectTypeCString), @"@": @(ELXObjectTypeObject), @"#": @(ELXObjectTypeClass),
+                                     @":": @(ELXObjectTypeSelector), @"[": @(ELXObjectTypeArray), @"{": @(ELXObjectTypeStruct),
+                                     @"(": @(ELXObjectTypeUnion), @"^": @(ELXObjectTypePtr), @"NSString": @(ELXObjectTypeString),
+                                     @"NSDate": @(ELXObjectTypeDateTime), @"?": @(ELXObjectTypeUnknown), @"B": @(ELXObjectTypeBOOL)};
+    }
+    
+    if (!ELXObjectPropertySQLTypeMap) {
+        ELXObjectPropertySQLTypeMap = @{@(ELXObjectTypeChar): @"TEXT", @(ELXObjectTypeInt): @"INTEGER", @(ELXObjectTypeShort): @"INTEGER",
+                                        @(ELXObjectTypeLong): @"INTEGER", @(ELXObjectTypeLongLong): @"INTEGER", @(ELXObjectTypeUnsignedChar): @"TEXT",
+                                        @(ELXObjectTypeUnsignedInt): @"INTEGER", @(ELXObjectTypeUnsignedShort): @"INTEGER", @(ELXObjectTypeUnsignedLong): @"INTEGER",
+                                        @(ELXObjectTypeUnsignedLongLong): @"INTEGER", @(ELXObjectTypeFloat): @"REAL", @(ELXObjectTypeDouble): @"REAL",
+                                        @(ELXObjectTypeCString): @"TEXT", @(ELXObjectTypeObject): @"BLOB", @(ELXObjectTypeClass): @"TEXT",
+                                        @(ELXObjectTypeSelector): @"BLOB", @(ELXObjectTypeArray): kELXObjectUnsupportedKey, @(ELXObjectTypeStruct): kELXObjectUnsupportedKey,
+                                        @(ELXObjectTypeUnion): kELXObjectUnsupportedKey, @(ELXObjectTypePtr): @"BLOB", @(ELXObjectTypeString): @"TEXT",
+                                        @(ELXObjectTypeDateTime): @"REAL", @(ELXObjectTypeUnknown): kELXObjectUnsupportedKey, @(ELXObjectTypeBOOL): @"INTEGER"};
+    }
+    
+    if (!_classTableExists) {
+        _classTableExists = [self tableExists];
+        if (!_classTableExists) [self createTable];
+        _classTableExists = YES;
+    }
+    
+    if (!_schemaUpdated) {
+        [self updateSchema];
+        _schemaUpdated = YES;
+    }
+}
+
+/**
+ * The actural implementation to write an object to database
+ */
+- (void)archiveObjectIMP
+{
     if (_inMemoryOnly) {
         // assign next ID
         self.elxuid = _mdatabaseNextID;
@@ -448,8 +611,8 @@ static NSUInteger _mdatabaseNextID;
             NSString *value = nil;
             
             if (![self respondsToSelector:getter]) {
-                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
-                }
+                [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+            }
             IMP imp = [self methodForSelector:getter];
             const char *(*func)(id, SEL) = (void *)imp;
             val = func(self, getter);
@@ -564,8 +727,8 @@ static NSUInteger _mdatabaseNextID;
             NSValue *value;
             
             if (![self respondsToSelector:getter]) {
-                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
-                }
+                [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+            }
             IMP imp = [self methodForSelector:getter];
             SEL (*func)(id, SEL) = (void *)imp;
             val = func(self, getter);
@@ -601,8 +764,8 @@ static NSUInteger _mdatabaseNextID;
             NSValue *value;
             
             if (![self respondsToSelector:getter]) {
-                    [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
-                }
+                [NSException raise:ELXInvalidPropertyException format:ERR_INVALID_GETTER];
+            }
             IMP imp = [self methodForSelector:getter];
             void *(*func)(id, SEL) = (void *)imp;
             val = func(self, getter);
@@ -727,12 +890,10 @@ static NSUInteger _mdatabaseNextID;
     [self.class closeDatabase];
 }
 
-#pragma mark - Delete Object
 /**
- * Remove the object from on-disk or in-memory database
- * NOTE: if an object is saved both on-disk and in-memory, only the version it's currently in will be deleted.
+ * The actuural implementation to delete an object from database
  */
-- (void)deleteObject
+- (void)deleteObjectIMP
 {
     if (_inMemoryOnly) {
         [_mdatabase removeObject:self];
@@ -765,119 +926,6 @@ static NSUInteger _mdatabaseNextID;
     // clean up
     sqlite3_finalize(stmt);
     [self.class closeDatabase];
-}
-
-#pragma mark - In Memory Only Behavior
-/**
- * If set to YES, the current object will be in-memory-only.
- * This means all the changes will only be buffered in memory, but you can still query the object.
- * NOTE: if you set a object to be in-memory-only after archiving it, the further changes will
- * be cached in memory only.
- *
- * @param inMemoryOnly: whether this object should be in-memory-only
- */
-- (void)setInMemoryOnly:(BOOL)inMemoryOnly
-{
-    _inMemoryOnly = inMemoryOnly;
-}
-
-#pragma mark - Configuration
-/**
- * Override this method to change the path to the on-disk database file.
- * WARNING: Do NOT change this path after you have already saved items to database
- * because the data base will NOT be relocated
- *
- * @return NSSting *: the string path to the on-disk database file
- */
-#if TARGET_OS_IPHONE
-+ (nonnull NSString *)databasePath
-{
-    NSString *basePath = (NSString *)[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
-    return [basePath stringByAppendingString:ELXDefaultDatabaseFolder];
-}
-#else
-+ (nonnull NSString *)databasePath
-{
-    NSString *basePath = (NSString *)[NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES) firstObject];
-    return [basePath stringByAppendingString:ELXDefaultDatabaseFolder];
-}
-#endif
-
-/**
- * Append the name of the database file to the end of the database path.
- *
- * @return NSString *: the entire path to the database file, including the file name
- */
-+ (nonnull NSString *)databaseFile
-{
-    return [[self databasePath] stringByAppendingString:ELXDefaultDatabaseFile];
-}
-
-/**
- * Set the archive option to the current object. See ELXObjectArchiveOption ENUM for the options.
- * The default value is ELXObjectArchiveOptionManual.
- *
- * @param ELXObjectArchiveOption: the new archive option to be set
- */
-- (void)setArchiveOption:(ELXObjectArchiveOption)archiveOption
-{
-    _archiveOption = archiveOption;
-}
-
-#pragma mark - Private Utils
-/**
- * Common initialize code for the class
- */
-+ (void)commonInit
-{
-    [self createDatabaseFile];
-    
-    if (!_mdatabase) {
-        _mdatabase = [NSMutableArray new];
-    }
-    
-    if (!_globalQueryBindings) {
-        _globalQueryBindings = [NSMutableArray new];
-    }
-    
-    _mdatabaseNextID = NSUIntegerMax - 1;
-    
-    if (!ELXObjectPropertyNameTable) {
-        ELXObjectPropertyNameTable = [NSMutableArray new];
-    }
-    
-    if (!ELXObjectPropertyTypeMap) {
-        ELXObjectPropertyTypeMap = @{@"c": @(ELXObjectTypeChar), @"i": @(ELXObjectTypeInt), @"s": @(ELXObjectTypeShort),
-                                     @"l": @(ELXObjectTypeLong), @"q": @(ELXObjectTypeLongLong), @"C": @(ELXObjectTypeUnsignedChar),
-                                     @"I": @(ELXObjectTypeUnsignedInt), @"S": @(ELXObjectTypeUnsignedShort), @"L": @(ELXObjectTypeUnsignedLong),
-                                     @"Q": @(ELXObjectTypeUnsignedLongLong), @"f": @(ELXObjectTypeFloat), @"d": @(ELXObjectTypeDouble),
-                                     @"*": @(ELXObjectTypeCString), @"@": @(ELXObjectTypeObject), @"#": @(ELXObjectTypeClass),
-                                     @":": @(ELXObjectTypeSelector), @"[": @(ELXObjectTypeArray), @"{": @(ELXObjectTypeStruct),
-                                     @"(": @(ELXObjectTypeUnion), @"^": @(ELXObjectTypePtr), @"NSString": @(ELXObjectTypeString),
-                                     @"NSDate": @(ELXObjectTypeDateTime), @"?": @(ELXObjectTypeUnknown), @"B": @(ELXObjectTypeBOOL)};
-    }
-    
-    if (!ELXObjectPropertySQLTypeMap) {
-        ELXObjectPropertySQLTypeMap = @{@(ELXObjectTypeChar): @"TEXT", @(ELXObjectTypeInt): @"INTEGER", @(ELXObjectTypeShort): @"INTEGER",
-                                        @(ELXObjectTypeLong): @"INTEGER", @(ELXObjectTypeLongLong): @"INTEGER", @(ELXObjectTypeUnsignedChar): @"TEXT",
-                                        @(ELXObjectTypeUnsignedInt): @"INTEGER", @(ELXObjectTypeUnsignedShort): @"INTEGER", @(ELXObjectTypeUnsignedLong): @"INTEGER",
-                                        @(ELXObjectTypeUnsignedLongLong): @"INTEGER", @(ELXObjectTypeFloat): @"REAL", @(ELXObjectTypeDouble): @"REAL",
-                                        @(ELXObjectTypeCString): @"TEXT", @(ELXObjectTypeObject): @"BLOB", @(ELXObjectTypeClass): @"TEXT",
-                                        @(ELXObjectTypeSelector): @"BLOB", @(ELXObjectTypeArray): kELXObjectUnsupportedKey, @(ELXObjectTypeStruct): kELXObjectUnsupportedKey,
-                                        @(ELXObjectTypeUnion): kELXObjectUnsupportedKey, @(ELXObjectTypePtr): @"BLOB", @(ELXObjectTypeString): @"TEXT",
-                                        @(ELXObjectTypeDateTime): @"REAL", @(ELXObjectTypeUnknown): kELXObjectUnsupportedKey, @(ELXObjectTypeBOOL): @"INTEGER"};
-    }
-    
-    if (!_classTableExists) {
-        _classTableExists = [self tableExists];
-        if (!_classTableExists) [self createTable];
-        _classTableExists = YES;
-    }
-    
-    if (!_schemaUpdated) {
-        [self updateSchema];
-        _schemaUpdated = YES;
-    }
 }
 
 /**

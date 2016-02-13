@@ -20,10 +20,16 @@ typedef NS_ENUM(NSUInteger, ELXObjectArchiveOption) {
 
 #pragma mark - Archiving & Deleting Objects
 /**
- * Object will be written to on-disk or in-memory database when invoked.
+ * Object will be *synchronously* written to on-disk or in-memory database when invoked.
  * This method is automatically invoked at -(void)delloc with ELXObjectArchiveOptionOnObjectDelloc option.
  */
 - (void)archiveObject;
+/**
+ * Asynchronously write the object to database
+ * This method will return immediately, possibly before the writing has completed.
+ */
+- (void)archiveObjectAsynchronous;
+
 /**
  * Remove the object from on-disk or in-memory database
  * NOTE: if an object is saved both on-disk and in-memory, only the version it's currently in will be deleted.
